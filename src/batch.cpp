@@ -50,16 +50,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    fs::create_directories(outputRoot / "predictions");
     fs::create_directories(outputRoot / "images");
-
-    ofstream failures(outputRoot / "failures.txt");
-
-    if (!failures) {
-        cerr << "Could not create the error log\n";
-        return 1;
-    }
-
+    
     string imageRelative;
     string annotationRelative;
 
@@ -207,7 +199,6 @@ int main(int argc, char* argv[]) {
             ++failed;
 
             cerr << imageId << ": " << error.what() << '\n';
-            failures << imageId << ": " << error.what() << '\n';
         }
     }
 
