@@ -300,5 +300,4 @@ static void printBatchSummary(
 
     os << '\n';
     os << string(58, '=') << '\n';
-    os << "Metrics cover successfully processed images only.\n";
 }
