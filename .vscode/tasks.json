@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build cpp",
+            "type": "shell",
+            "command": "g++ -std=c++17 -Wall -Wextra -g -O0 \"${file}\" -o \"${workspaceFolder}/build/${fileBasenameNoExtension}\" $(pkg-config --cflags --libs opencv4) && \"${workspaceFolder}/build/${fileBasenameNoExtension}\"",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
