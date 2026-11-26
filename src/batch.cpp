@@ -11,13 +11,39 @@ using namespace std;
 using namespace cv;
 namespace fs = std::filesystem;
 
-int main() {
+static void printBatchSummary(
+    ostream& os,
+    const string& dataset,
+    int attempted,
+    int succeeded,
+    int failed,
+    const Score& totalLocation,
+    const Score& totalClass,
+    const ClassificationStats& classificationStats
+);
+
+int main(int argc, char* argv[]) {
     const fs::path dataRoot = "./DeepPCB/PCBData";
     const fs::path outputRoot = "./output/batch";
-    const int maxImages = 20;
+
+    string dataset = "trainval";
+    int maxImages = -1;
+    bool saveImages = false;
+
+    if (argc > 1) {
+        dataset = argv[1];
+    }
+
+    if (argc > 2) {
+        maxImages = stoi(argv[2]);
+    }
+
+    if (argc > 3) {
+        saveImages = string(argv[3]) == "1";
+    }
 
 
-    ifstream list(dataRoot / "trainval.txt");
+    ifstream list(dataRoot / (dataset + ".txt"));
 
     if (!list.is_open()) {
         cerr << "Could not open the dataset list\n";
@@ -45,8 +71,8 @@ int main() {
     Score totalClass;
     ClassificationStats classificationStats;
 
-    while (attempted < maxImages &&
-           list >> imageRelative >> annotationRelative) {
+    while ((maxImages < 0 || attempted < maxImages) &&
+           (list >> imageRelative >> annotationRelative)) {
         ++attempted;
 
         // Example: group20085/20085/20085000.jpg
@@ -101,10 +127,51 @@ int main() {
             if (!output) {
                 throw runtime_error("Could not create the prediction file");
             }
-            
-            Mat result;
-            cvtColor(testImage, result, COLOR_GRAY2BGR);
 
+            if (saveImages) {
+                Mat result;
+                cvtColor(testImage, result, COLOR_GRAY2BGR);
+
+                // Draw prediction boxes
+                for (const Detection& detection : predictions) {
+                    const Rect& box = detection.box;
+                    rectangle(result, box, Scalar(0, 0, 255), 2);
+                    
+                    putText(
+                        result,
+                        detection.type,
+                        Point(box.x, max(15, box.y - 5)),
+                        FONT_HERSHEY_SIMPLEX,
+                        0.45,
+                        Scalar(0, 255, 0),
+                        1
+                    );
+                }
+
+                // Draw ground-truth boxes
+                for (const Detection& truth : groundTruth) {
+                    rectangle(result, truth.box, Scalar(0, 255, 0), 1);
+                }
+
+                fs::path resultPath = outputRoot / "images" / (imageId + ".png");
+
+                // Save the result image
+                if (!imwrite(resultPath.string(), result)) {
+                    throw runtime_error("Failed to save the result image");
+                }
+
+                // Save images containing false negatives separately
+                if (locationScore.fn > 0) {
+                    fs::create_directories(outputRoot / "FN");
+
+                    fs::path fnPath =
+                        outputRoot / "FN" / (imageId + ".png");
+
+                    imwrite(fnPath.string(), result);
+                }
+            }
+            
+            
             for (const Detection& detection : predictions) {
                 const Rect& box = detection.box;
 
@@ -116,18 +183,6 @@ int main() {
                        << box.y + box.height - 1 << ','
                        << "1.0" << ','
                        << detection.type << '\n';
-
-                rectangle(result, box, Scalar(0, 0, 255), 2);
-
-                putText(
-                    result,
-                    detection.type,
-                    Point(box.x, max(15, box.y - 5)),
-                    FONT_HERSHEY_SIMPLEX,
-                    0.45,
-                    Scalar(0, 255, 0),
-                    1
-                );
             }
 
             output.close();
@@ -136,35 +191,12 @@ int main() {
                 throw runtime_error("Failed to write the prediction file");
             }
 
-            fs::path resultPath =
-                outputRoot / "images" / (imageId + ".png");
-
-            // Draw ground-truth boxes
-            for (const Detection& truth : groundTruth) {
-                rectangle(result, truth.box, Scalar(0, 255, 0), 1);
-            }
-
             // Update classification statistics and visualize FN
             updateClassificationStats(
                 predictions,
                 groundTruth,
                 classificationStats
             );
-
-            // Save images containing false negatives separately
-            if (locationScore.fn > 0) {
-                fs::create_directories(outputRoot / "FN");
-
-                fs::path fnPath =
-                    outputRoot / "FN" / (imageId + ".png");
-
-                imwrite(fnPath.string(), result);
-            }
-
-            // Save the result image
-            if (!imwrite(resultPath.string(), result)) {
-                throw runtime_error("Failed to save the result image");
-            }
 
             totalLocation.add(locationScore);
             totalClass.add(classScore);
@@ -179,9 +211,17 @@ int main() {
         }
     }
 
-    printScore(cout, "Location only", totalLocation);
-    printScore(cout, "Location and class", totalClass);
-    printClassificationStats(cout, classificationStats);
+
+    printBatchSummary(
+        cout,
+        dataset,
+        attempted,
+        succeeded,
+        failed,
+        totalLocation,
+        totalClass,
+        classificationStats
+    );
 
     ofstream summary(outputRoot / "summary.txt");
 
@@ -190,14 +230,16 @@ int main() {
         return 1;
     }
 
-    summary << "Succeeded: " << succeeded
-            << ", Failed: " << failed << '\n'
-            << "Local evaluation, IoU > 0.33\n"
-            << "Metrics cover successfully processed images only.\n\n";
-
-    printScore(summary, "Location only", totalLocation);
-    printScore(summary, "Location and class", totalClass);
-    printClassificationStats(summary, classificationStats);
+    printBatchSummary(
+        summary,
+        dataset,
+        attempted,
+        succeeded,
+        failed,
+        totalLocation,
+        totalClass,
+        classificationStats
+    );
 
     summary.close();
 
@@ -207,4 +249,56 @@ int main() {
     }
 
     return failed > 0 ? 1 : 0;
+}
+
+
+
+static void printBatchSummary(
+    ostream& os,
+    const string& dataset,
+    int attempted,
+    int succeeded,
+    int failed,
+    const Score& totalLocation,
+    const Score& totalClass,
+    const ClassificationStats& classificationStats
+) {
+    os << "\n";
+    os << "==================== Batch Evaluation ====================\n\n";
+
+    os << left << setw(19) << "Dataset:"
+       << dataset << '\n';
+
+    os << left << setw(19) << "IoU threshold:"
+       << "> 0.33" << '\n';
+
+    os << left << setw(19) << "Images attempted:"
+       << attempted << '\n';
+
+    os << left << setw(19) << "Images succeeded:"
+       << succeeded << '\n';
+
+    os << left << setw(19) << "Images failed:"
+       << failed << '\n';
+
+    os << left << setw(19) << "Ground truth:"
+       << totalLocation.tp + totalLocation.fn << '\n';
+
+    os << left << setw(19) << "Predictions:"
+       << totalLocation.tp + totalLocation.fp << '\n';
+
+    printDetectionSummary(
+        os,
+        totalLocation,
+        totalClass
+    );
+
+    printClassificationStats(
+        os,
+        classificationStats
+    );
+
+    os << '\n';
+    os << string(58, '=') << '\n';
+    os << "Metrics cover successfully processed images only.\n";
 }

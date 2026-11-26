@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <ostream>
 #include <vector>
 #include <string>
 
@@ -59,4 +60,10 @@ void printScore(
     std::ostream& out,
     const std::string& title,
     const Score& score
+);
+
+void printDetectionSummary(
+    std::ostream& os,
+    const Score& location,
+    const Score& classification
 );

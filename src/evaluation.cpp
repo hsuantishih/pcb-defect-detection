@@ -345,3 +345,53 @@ void printScore(
         << "Recall: " << score.recall() << '\n'
         << "F1: " << score.f1() << "\n\n";
 }
+
+void printDetectionSummary(
+    ostream& os,
+    const Score& location,
+    const Score& classification
+) {
+    os << "\nDetection Performance\n";
+    os << string(58, '-') << '\n';
+
+    os << left  << setw(18) << "Metric"
+       << right << setw(20) << "Location Only"
+       << right << setw(20) << "Location + Class"
+       << '\n';
+
+    os << string(58, '-') << '\n';
+
+    os << left  << setw(18) << "TP"
+       << right << setw(20) << location.tp
+       << right << setw(20) << classification.tp
+       << '\n';
+
+    os << left  << setw(18) << "FP"
+       << right << setw(20) << location.fp
+       << right << setw(20) << classification.fp
+       << '\n';
+
+    os << left  << setw(18) << "FN"
+       << right << setw(20) << location.fn
+       << right << setw(20) << classification.fn
+       << '\n';
+
+    os << fixed << setprecision(4);
+
+    os << left  << setw(18) << "Precision"
+       << right << setw(20) << location.precision()
+       << right << setw(20) << classification.precision()
+       << '\n';
+
+    os << left  << setw(18) << "Recall"
+       << right << setw(20) << location.recall()
+       << right << setw(20) << classification.recall()
+       << '\n';
+
+    os << left  << setw(18) << "F1-score"
+       << right << setw(20) << location.f1()
+       << right << setw(20) << classification.f1()
+       << '\n';
+
+    os << string(58, '-') << "\n\n";
+}
