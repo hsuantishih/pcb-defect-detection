@@ -3,6 +3,7 @@
 
 #include <set>
 #include <algorithm>
+#include <filesystem>
 
 using namespace std;
 using namespace cv;
@@ -157,6 +158,39 @@ static string classifyDefect(
     return "mousebite";
 }
 
+static Mat getToleranceMask(
+    const Mat& tempCopper,
+    const Mat& testCopper,
+    int tolerance
+) {
+    Mat kernel = getStructuringElement(
+        MORPH_ELLIPSE,
+        Size(2 * tolerance + 1, 2 * tolerance + 1)
+    );
+
+    // Expand the acceptable copper boundaries
+    Mat dilatedTemp, dilatedTest;
+
+    dilate(tempCopper, dilatedTemp, kernel);
+    dilate(testCopper, dilatedTest, kernel);
+
+    Mat notDilatedTemp, notDilatedTest;
+
+    bitwise_not(dilatedTemp, notDilatedTemp);
+    bitwise_not(dilatedTest, notDilatedTest);
+
+    // Detect differences beyond the boundary tolerance
+    Mat extra, missing;
+
+    bitwise_and(testCopper, notDilatedTemp, extra);
+    bitwise_and(tempCopper, notDilatedTest, missing);
+
+    Mat toleranceMask;
+    bitwise_or(extra, missing, toleranceMask);
+
+    return toleranceMask;
+}
+
 vector<Detection> detectDefects(
     const Mat& temp_image,
     const Mat& test_image
@@ -174,10 +208,32 @@ vector<Detection> detectDefects(
     Mat binary;
     threshold(diff, binary, 40, 255, THRESH_BINARY);
 
+    const int tolerance = 3;
+
+    Mat toleranceMask = getToleranceMask(tempCopper, testCopper, tolerance);
+
+    Mat filtered;
+
+    bitwise_and(binary, toleranceMask, filtered);
+
     // Morphological Opening
     Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
     Mat dst;
-    morphologyEx(binary, dst, MORPH_OPEN, kernel);
+    morphologyEx(filtered, dst, MORPH_OPEN, kernel);
+
+    // Debug images
+    string debugDir = "./debug/";
+
+    if (!filesystem::exists(debugDir)) {
+        filesystem::create_directory(debugDir);
+    }
+    imwrite(debugDir + "01_testCopper.png", testCopper);
+    imwrite(debugDir + "02_tempCopper.png", tempCopper);
+    imwrite(debugDir + "03_diff.png", diff);
+    imwrite(debugDir + "04_binary.png", binary);
+    imwrite(debugDir + "05_toleranceMask.png", toleranceMask);
+    imwrite(debugDir + "06_filtered.png", filtered);
+    imwrite(debugDir + "07_opened.png", dst);
 
     // Find Contours
     vector<vector<Point>> contours;

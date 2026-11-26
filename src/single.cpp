@@ -14,13 +14,13 @@ namespace fs = std::filesystem;
 int main() {
     // Change these three paths to inspect another sample.
     const fs::path tempPath =
-        "./DeepPCB/PCBData/group20085/20085/20085007_temp.jpg";
+        "./DeepPCB/PCBData/group20085/20085/20085000_temp.jpg";
 
     const fs::path testPath =
-        "./DeepPCB/PCBData/group20085/20085/20085007_test.jpg";
+        "./DeepPCB/PCBData/group20085/20085/20085000_test.jpg";
 
     const fs::path labelPath =
-        "./DeepPCB/PCBData/group20085/20085_not/20085007.txt";
+        "./DeepPCB/PCBData/group20085/20085_not/20085000.txt";
 
     const string imageId = labelPath.stem().string();
 
@@ -216,16 +216,16 @@ int main() {
         cout << "Press any key in an image window to exit.\n";
 
         // // 8. Display results.
-        namedWindow("Predictions", WINDOW_NORMAL);
-        namedWindow("Ground truth", WINDOW_NORMAL);
-        namedWindow("Overlay", WINDOW_NORMAL);
+        // namedWindow("Predictions", WINDOW_NORMAL);
+        // namedWindow("Ground truth", WINDOW_NORMAL);
+        // namedWindow("Overlay", WINDOW_NORMAL);
 
-        imshow("Predictions", predictionView);
-        imshow("Ground truth", groundTruthView);
-        imshow("Overlay", overlayView);
+        // imshow("Predictions", predictionView);
+        // imshow("Ground truth", groundTruthView);
+        // imshow("Overlay", overlayView);
 
-        waitKey(0);
-        destroyAllWindows();
+        // waitKey(0);
+        // destroyAllWindows();
 
         return 0;
     }
