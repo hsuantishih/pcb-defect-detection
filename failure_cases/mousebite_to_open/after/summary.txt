@@ -1,0 +1,33 @@
+Image: 20085007
+Local evaluation, IoU > 0.33
+
+Location only
+TP: 6, FP: 0, FN: 0
+Precision: 1.0000
+Recall: 1.0000
+F1: 1.0000
+
+Location and class
+TP: 6, FP: 0, FN: 0
+Precision: 1.0000
+Recall: 1.0000
+F1: 1.0000
+
+
+Classification on location-matched defects
+Matched: 6
+Correct: 6
+Accuracy: 1.0000
+Unmatched ground truth: 0
+Unmatched predictions: 0
+
+Confusion matrix
+Rows = actual, columns = predicted
+
+      Actual        open       short   mousebite        spur      copper    pin-hole     unknown
+        open           0           0           0           0           0           0           0
+       short           0           0           0           0           0           0           0
+   mousebite           0           0           1           0           0           0           0
+        spur           0           0           0           1           0           0           0
+      copper           0           0           0           0           2           0           0
+    pin-hole           0           0           0           0           0           2           0

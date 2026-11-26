@@ -1,0 +1,43 @@
+
+==================== Batch Evaluation ====================
+
+Dataset:           trainval
+IoU threshold:     > 0.33
+Images attempted:  1000
+Images succeeded:  1000
+Images failed:     0
+Ground truth:      6873
+Predictions:       17390
+
+Detection Performance
+----------------------------------------------------------
+Metric                   Location Only    Location + Class
+----------------------------------------------------------
+TP                                6649                6476
+FP                               10741               10914
+FN                                 224                 397
+Precision                       0.3823              0.3724
+Recall                          0.9674              0.9422
+F1-score                        0.5481              0.5338
+----------------------------------------------------------
+
+
+Classification on location-matched defects
+Matched: 6649
+Correct: 6464
+Accuracy: 0.9722
+Unmatched ground truth: 224
+Unmatched predictions: 10741
+
+Confusion matrix
+Rows = actual, columns = predicted
+
+      Actual        open       short   mousebite        spur      copper    pin-hole     unknown
+        open        1193           0          27           2           0           0           4
+       short           0         980           0           5           0           0           3
+   mousebite         103           0        1168           5           0          12           6
+        spur           0           1           6        1094           0           0           5
+      copper           0           0           0           0        1009           0           0
+    pin-hole           0           0           4           0           0        1020           2
+
+==========================================================

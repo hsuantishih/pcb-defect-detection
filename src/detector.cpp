@@ -121,7 +121,10 @@ static string classifyDefect(
     }
 
     Mat testLabels;
-    cv::connectedComponents(testROI, testLabels, 8, CV_32S);
+    Mat stats;
+    Mat centroids;
+
+    connectedComponentsWithStats(testROI, testLabels, stats, centroids, 8, CV_32S);
 
     set<int> originalIds = getLabels(tempLabels, defect);
 
@@ -134,9 +137,21 @@ static string classifyDefect(
 
         set<int> remainingIds = getLabels(testLabels, nearbyRegion);
 
-        if (remainingIds.size() >= 2) {
-            return "open";
+        const int minComponentArea = 5;
+        set<int> validIds;
+
+        for (int id : remainingIds) {
+            int area = stats.at<int>(id, CC_STAT_AREA);
+
+            if (area >= minComponentArea) {
+                validIds.insert(id);
+            }
+
+            if (validIds.size() >= 2) {
+                return "open";
+            }
         }
+
     }
 
     return "mousebite";
