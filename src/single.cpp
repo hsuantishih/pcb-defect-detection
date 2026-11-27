@@ -174,6 +174,10 @@ int main(int argc, char* argv[]) {
         }
 
         // 5. Save evaluation results.
+        if (saveResults || saveImages) {
+            fs::create_directories(outputDir);
+        }
+
         ofstream summaryFile;
 
         if (saveResults) {
