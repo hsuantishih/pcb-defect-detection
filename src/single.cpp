@@ -11,16 +11,37 @@ using namespace std;
 using namespace cv;
 namespace fs = std::filesystem;
 
-int main() {
+int main(int argc, char* argv[]) {
+    string groupId = "20085";
+    string suffixId = "000";
+    bool saveResults = false;
+    bool saveImages = false;
+
+    if (argc > 1) {
+        groupId = argv[1];
+    }
+
+    if (argc > 2) {
+        suffixId = argv[2];
+    }
+
+    if (argc > 3) {
+        saveResults = string(argv[3]) == "1";
+    }
+
+    if (argc > 4) {
+        saveImages = string(argv[4]) == "1";
+    }
+
     // Change these three paths to inspect another sample.
-    const fs::path tempPath =
-        "./DeepPCB/PCBData/group20085/20085/20085007_temp.jpg";
+    fs::path tempPath =
+        "./DeepPCB/PCBData/group" + groupId + "/" + groupId + "/" + groupId + suffixId + "_temp.jpg";
 
     const fs::path testPath =
-        "./DeepPCB/PCBData/group20085/20085/20085007_test.jpg";
+        "./DeepPCB/PCBData/group" + groupId + "/" + groupId + "/" + groupId + suffixId + "_test.jpg";
 
     const fs::path labelPath =
-        "./DeepPCB/PCBData/group20085/20085_not/20085007.txt";
+        "./DeepPCB/PCBData/group" + groupId + "/" + groupId + "_not/" + groupId + suffixId + ".txt";
 
     const string imageId = labelPath.stem().string();
 
@@ -70,14 +91,6 @@ int main() {
             imageId
         );
 
-        cout << "\nImage: " << imageId << '\n'
-             << "Predictions: " << predictions.size() << '\n'
-             << "Ground truth: " << groundTruth.size() << "\n\n";
-
-        printScore(cout, "Location only", locationScore);
-        printScore(cout, "Location and class", classScore);
-        printClassificationStats(cout, classificationStats);
-
         // 4. Draw predictions and annotations separately.
         Mat predictionView;
         cvtColor(testImage, predictionView, COLOR_GRAY2BGR);
@@ -126,6 +139,13 @@ int main() {
                 Scalar(0, 0, 255),
                 2
             );
+
+            drawLabel(
+                overlayView,
+                prediction,
+                "P" + to_string(i) + " " + prediction.type,
+                Scalar(0, 0, 255)
+            );
         }
 
         for (size_t i = 0; i < groundTruth.size(); ++i) {
@@ -144,88 +164,65 @@ int main() {
                 Scalar(0, 255, 0),
                 1
             );
+
+            drawLabel(
+                overlayView,
+                truth,
+                "G" + to_string(i) + " " + truth.type,
+                Scalar(0, 255, 0)
+            );
         }
 
-        // 5. Save predictions.
-        fs::create_directories(outputDir);
+        // 5. Save evaluation results.
+        ofstream summaryFile;
 
-        ofstream predictionFile(outputDir / "predictions.txt");
+        if (saveResults) {
+            fs::create_directories(outputDir);
+            summaryFile.open(outputDir / "summary.txt");
 
-        if (!predictionFile) {
-            throw runtime_error("Could not create prediction file");
+            if (!summaryFile) {
+                throw runtime_error("Could not create summary file");
+            }
         }
 
-        for (const Detection& prediction : predictions) {
-            const Rect& box = prediction.box;
+        ostream& out = saveResults ? summaryFile : cout;
 
-            predictionFile
-                << box.x << ','
-                << box.y << ','
-                << box.x + box.width - 1 << ','
-                << box.y + box.height - 1 << ','
-                << "1.0" << ','
-                << prediction.type << '\n';
-        }
-
-        predictionFile.close();
-
-        if (!predictionFile) {
-            throw runtime_error("Failed to write predictions");
-        }
-
-        // 6. Save evaluation results.
-        ofstream summary(outputDir / "summary.txt");
-
-        if (!summary) {
-            throw runtime_error("Could not create summary file");
-        }
-
-        summary << "Image: " << imageId << '\n'
+        out << "Image: " << imageId << '\n'
                 << "Local evaluation, IoU > 0.33\n\n";
 
-        printScore(summary, "Location only", locationScore);
-        printScore(summary, "Location and class", classScore);
-        printClassificationStats(summary, classificationStats);
+        printScore(out, "Location only", locationScore);
+        printScore(out, "Location and class", classScore);
+        printClassificationStats(out, classificationStats);
 
-        summary.close();
 
-        if (!summary) {
-            throw runtime_error("Failed to write summary");
+        if (saveImages) {
+            // 6. Save visualization images.
+            if (!imwrite(
+                    (outputDir / "predictions.png").string(),
+                    predictionView)) {
+                throw runtime_error("Could not save prediction image");
+            }
+    
+            if (!imwrite(
+                    (outputDir / "ground_truth.png").string(),
+                    groundTruthView)) {
+                throw runtime_error("Could not save ground-truth image");
+            }
+    
+            if (!imwrite(
+                    (outputDir / "overlay.png").string(),
+                    overlayView)) {
+                throw runtime_error("Could not save overlay image");
+            }
+    
+            cout << "\nResults saved to: " << outputDir << '\n';
         }
 
-        // 7. Save visualization images.
-        if (!imwrite(
-                (outputDir / "predictions.png").string(),
-                predictionView)) {
-            throw runtime_error("Could not save prediction image");
-        }
+        cout << "\nGreen boxes = ground truth, red boxes = predictions\n";
 
-        if (!imwrite(
-                (outputDir / "ground_truth.png").string(),
-                groundTruthView)) {
-            throw runtime_error("Could not save ground-truth image");
-        }
-
-        if (!imwrite(
-                (outputDir / "overlay.png").string(),
-                overlayView)) {
-            throw runtime_error("Could not save overlay image");
-        }
-
-        cout << "\nResults saved to: " << outputDir << '\n';
-        cout << "Press any key in an image window to exit.\n";
-
-        // // 8. Display results.
-        namedWindow("Predictions", WINDOW_NORMAL);
-        namedWindow("Ground truth", WINDOW_NORMAL);
         namedWindow("Overlay", WINDOW_NORMAL);
-
-        imshow("Predictions", predictionView);
-        imshow("Ground truth", groundTruthView);
         imshow("Overlay", overlayView);
-
         waitKey(0);
-        destroyAllWindows();
 
         return 0;
     }
