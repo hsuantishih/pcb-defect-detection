@@ -1,4 +1,4 @@
-# PCB Defect Detection
+# PCB Defect Detection and Classification
 
 A classical image processing pipeline for printed circuit board (PCB) defect detection and classification using C++ and OpenCV.
 
